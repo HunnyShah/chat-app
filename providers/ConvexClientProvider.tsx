@@ -23,11 +23,10 @@ const ConvexClientProvider = ({ children }: Props) => {
   return (
     <ClerkProvider publishableKey="pk_test_ZnJhbmstZXdlLTI5LmNsZXJrLmFjY291bnRzLmRldiQ">
       <ConvexProviderWithClerk useAuth={useAuth} client={convex}>
-        {/* <Authenticated>{children}</Authenticated>
+        <Authenticated>{children}</Authenticated>
         <AuthLoading>
           <LoadingLogo />
-        </AuthLoading> */}
-        {children}
+        </AuthLoading>
       </ConvexProviderWithClerk>
     </ClerkProvider>
   );
