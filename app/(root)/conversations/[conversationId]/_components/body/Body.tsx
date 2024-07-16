@@ -26,7 +26,7 @@ const Body = (props: Props) => {
               key={message._id}
               fromCurrentUser={isCurrentUser}
               senderImage={senderImage}
-              SenderName={senderName}
+              senderName={senderName}
               lastByUser={lastByUser}
               content={message.content}
               createAt={message._creationTime}
