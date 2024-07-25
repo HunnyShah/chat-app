@@ -16,16 +16,16 @@ import LeaveGroupDialog from "./_components/dialogs/LeaveGroupDialog";
 type Props = { params: { conversationId: Id<"conversations"> } };
 
 const ConversationPage = ({ params: { conversationId } }: Props) => {
-  const conveersation = useQuery(api.conversation.get, { id: conversationId });
+  const conversation = useQuery(api.conversation.get, { id: conversationId });
   const [removeFriendDialogOpen, setRemoveFriendDialogOpen] = useState(false);
   const [deleteGroupDialogOpen, setDeleteGroupDialogOpen] = useState(false);
   const [leaveGroupDialogOpen, setLeaveGroupDialogOpen] = useState(false);
   const [callType, setCallType] = useState<"audio" | "video" | null>(null);
-  return conveersation === undefined ? (
+  return conversation === undefined ? (
     <div className=" w-full h-full flex items-center justify-center">
       <Loader2 className="h-8 w-8" />
     </div>
-  ) : conveersation === null ? (
+  ) : conversation === null ? (
     <p className=" w-full h-full flex items-center justify-center">
       Conversation not found
     </p>
@@ -48,17 +48,15 @@ const ConversationPage = ({ params: { conversationId } }: Props) => {
       />
       <Header
         name={
-          (conveersation.isGroup
-            ? conveersation.name
-            : conveersation.otherMember?.username) || ""
+          (conversation.isGroup
+            ? conversation.name
+            : conversation.otherMember?.username) || ""
         }
         imageUrl={
-          conveersation.isGroup
-            ? undefined
-            : conveersation.otherMember?.imageUrl
+          conversation.isGroup ? undefined : conversation.otherMember?.imageUrl
         }
         options={
-          conveersation.isGroup
+          conversation.isGroup
             ? [
                 {
                   label: "Leave Group",
@@ -80,7 +78,18 @@ const ConversationPage = ({ params: { conversationId } }: Props) => {
               ]
         }
       />
-      <Body /> <ChatInput />
+      <Body
+        members={
+          conversation.isGroup
+            ? conversation.otherMembers
+              ? conversation.otherMembers
+              : []
+            : conversation.otherMember
+              ? [conversation.otherMember]
+              : []
+        }
+      />{" "}
+      <ChatInput />
     </ConversationConatiner>
   );
 };

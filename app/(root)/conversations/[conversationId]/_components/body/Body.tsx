@@ -4,16 +4,86 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useConversation } from "@/hooks/useConversation";
 import { useQuery } from "convex/react";
-import React from "react";
+import React, { useEffect } from "react";
 import Message from "./Message";
+import { useMutationState } from "@/hooks/useMutationState";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-type Props = {};
+type Props = {
+  members: {
+    lastSeenMessageId?: Id<"messages">;
+    username?: string;
+    [key: string]: any;
+  }[];
+};
 
-const Body = (props: Props) => {
+const Body = ({ members }: Props) => {
   const { conversationId } = useConversation();
   const messages = useQuery(api.messages.get, {
     id: conversationId as Id<"conversations">,
   });
+  const { mutate: markRead } = useMutationState(api.conversation.markRead);
+
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      console.log({ messages });
+      markRead({ conversationId, messageId: messages[0].message._id })
+        .then((res) => {
+          console.log({ res });
+        })
+        .catch((err) => {
+          console.log({ err });
+        });
+    }
+  }, [messages?.length, conversationId]);
+
+  const formatSeenBy = (names: string[]) => {
+    console.log(names);
+    switch (names.length) {
+      case 1:
+        return (
+          <p className="text-muted-foreground text-sm text-right">{`Seen by ${names[0]}`}</p>
+        );
+      case 2:
+        return (
+          <p className="text-muted-foreground text-sm text-right">{`Seen by ${names[0]} and ${names[1]}`}</p>
+        );
+      default:
+        return (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <p className="text-muted-foreground text-sm text-right">{`Seen by ${names[0]}, ${names[1]}, and ${names.length - 2} more`}</p>
+              </TooltipTrigger>
+              <TooltipContent>
+                <ul>
+                  {names.map((name, index) => {
+                    return <li key={index}>{name}</li>;
+                  })}
+                </ul>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        );
+    }
+  };
+
+  const getSeenMessage = (messageId: Id<"messages">) => {
+    const SeenUsers = members
+      .filter((member) => member.lastSeenMessageId === messageId)
+      .map((user) => user.username!.split(" ")[0]);
+
+    console.log({ SeenUsers });
+    if (SeenUsers.length === 0) return undefined;
+
+    return formatSeenBy(SeenUsers);
+  };
+
   return (
     <div className="flex-1 w-full flex overflow-y-scroll flex-col-reverse gap-2 p-3 no-scrollbar">
       {messages?.map(
@@ -21,6 +91,10 @@ const Body = (props: Props) => {
           const lastByUser =
             messages[index - 1]?.message.senderId ===
             messages[index].message.senderId;
+          const seenMessage = isCurrentUser
+            ? getSeenMessage(message._id)
+            : undefined;
+
           return (
             <Message
               key={message._id}
@@ -30,6 +104,7 @@ const Body = (props: Props) => {
               lastByUser={lastByUser}
               content={message.content}
               createAt={message._creationTime}
+              seen={seenMessage}
               type={message.type}
             />
           );

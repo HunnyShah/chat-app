@@ -11,6 +11,7 @@ type Props = {
   lastByUser: boolean;
   content: string[];
   createAt: number;
+  seen?: React.ReactNode;
   type: string;
 };
 
@@ -21,6 +22,7 @@ const Message = ({
   lastByUser,
   content,
   createAt,
+  seen,
   type,
 }: Props) => {
   const formatTime = (timeStamp: number) => {
@@ -60,6 +62,7 @@ const Message = ({
             {formatTime(createAt)}
           </p>
         </div>
+        {seen}
       </div>
       <Avatar
         className={cn("relative w-8 h-8", {
