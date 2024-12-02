@@ -1,13 +1,13 @@
-name: Deploy to Google Cloud Run
+name: Deploy Next.js to EC2
 
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   deploy:
-    name: Build and Deploy to Cloud Run
+    name: Build and Deploy to EC2
     runs-on: ubuntu-latest
 
     steps:
@@ -15,41 +15,45 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16 # Adjust the version as needed
-
-      # Step 3: Install dependencies and build React app
-      - name: Install dependencies and build
+      # Step 2: Set up Docker
+      - name: Set up Docker
         run: |
-          npm install
-          npm run build
+          sudo apt-get update
+          sudo apt-get install -y docker.io
 
-      # Step 4: Authenticate with Google Cloud
-      - name: Authenticate with Google Cloud
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCLOUD_AUTH }}
-
-      # Step 5: Set up Google Cloud CLI
-      - name: Set up Google Cloud CLI
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          project_id: ${{ secrets.GCLOUD_PROJECT }}
-
-      # Step 6: Build and push Docker image
-      - name: Build and Push Docker Image
+      # Step 3: Build Docker image
+      - name: Build Docker Image
         run: |
-          gcloud builds submit \
-            --tag gcr.io/${{ secrets.GCLOUD_PROJECT }}/${{ secrets.SERVICE_NAME }}
+          docker build -t nextjs-app .
 
-      # Step 7: Deploy to Cloud Run
-      - name: Deploy to Cloud Run
+      # Step 4: Save Docker image to tar file
+      - name: Save Docker Image
         run: |
-          gcloud run deploy ${{ secrets.SERVICE_NAME }} \
-            --image gcr.io/${{ secrets.GCLOUD_PROJECT }}/${{ secrets.SERVICE_NAME }} \
-            --region ${{ secrets.GCLOUD_REGION }} \
-            --platform managed \
-            --allow-unauthenticated
+          docker save nextjs-app > nextjs-app.tar
+        env:
+          IMAGE_NAME: nextjs-app
+
+      # Step 5: Upload Docker image to EC2
+      - name: Upload Docker Image to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          source: nextjs-app.tar
+          target: ~/nextjs-app.tar
+
+      # Step 6: Deploy Docker image on EC2
+      - name: Deploy on EC2
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: ${{ secrets.EC2_PORT }}
+          script: |
+            docker load < ~/nextjs-app.tar
+            docker stop nextjs-app || true
+            docker rm nextjs-app || true
+            docker run -d --name nextjs-app -p 3000:3000 nextjs-app
